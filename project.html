@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Fitness Tracker & Guide</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for background and font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #e6f3ff; /* Very light blue for freshness */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        .container-card {
+            max-width: 700px;
+            width: 100%;
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+        }
+        .workout-row {
+            transition: all 0.3s ease;
+        }
+        /* Style for LLM output lists */
+        #coach-advice-text ul, .guide-content ul, .class-instructions ol, #meal-plan-output-text ul, #weekly-report-text ul {
+            list-style: disc;
+            margin-left: 1.5rem;
+            padding-left: 0.5rem;
+        }
+        #coach-advice-text li, .guide-content li, .class-instructions li, #meal-plan-output-text li, #weekly-report-text li {
+            margin-bottom: 0.5rem;
+            line-height: 1.5;
+        }
+        .class-instructions ol {
+            list-style-type: decimal;
+            list-style: decimal;
+            margin-left: 1.8rem;
+        }
+        /* New styles for a more "official" guide look */
+        .guide-section {
+            line-height: 1.6; /* Increased line height for better readability */
+            padding: 1.5rem; /* Increased padding */
+            background-color: #fcfcfc; /* Cleaner, almost white background */
+            border-left: 4px solid; /* A colored side border for structure */
+        }
+        .guide-content ul {
+            list-style: disc;
+            margin-top: 0.75rem;
+            margin-left: 1.25rem;
+            font-size: 0.95rem;
+            color: #4a5568; /* Slightly darker text for contrast */
+        }
+        .tab-button.active {
+            border-bottom: 3px solid #0ea5e9; /* Sky-500 */
+            color: #0369a1; /* Sky-700 */
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="container-card bg-white p-8 rounded-2xl shadow-2xl">
+        <header class="mb-6">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-extrabold text-gray-900 flex items-center space-x-2">
+                    FITSTOP💪 
+                </h1>
+            </div>
+            <p class="mt-2 text-sm text-gray-500">Your data is saved locally in this browser.</p>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-gray-200 mb-6">
+            <button id="tab-tracker" data-tab="tracker" class="tab-button flex-1 p-3 text-center text-gray-500 hover:text-sky-700 transition">
+                Workout Tracker
+            </button>
+            <button id="tab-classes" data-tab="classes" class="tab-button flex-1 p-3 text-center text-gray-500 hover:text-sky-700 transition">
+                Daily Classes
+            </button>
+            <button id="tab-guide" data-tab="guide" class="tab-button flex-1 p-3 text-center text-gray-500 hover:text-sky-700 transition">
+                Training Guide
+            </button>
+        </div>
+        
+        <!-- Tab Content: Workout Tracker -->
+        <div id="content-tracker" class="tab-content hidden">
+            <!-- LLM Integration Section -->
+            <div class="pt-2 border-t border-gray-100 mb-6">
+                
+                <h2 class="text-xl font-bold mb-4 text-sky-700">AI Insights & Planning</h2>
+                
+                <!-- Buttons for AI Coach, Meal Plan, and Report -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                    <button id="get-advice-btn"
+                            class="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-5 rounded-xl transition duration-150 ease-in-out shadow-lg hover:shadow-xl flex items-center justify-center disabled:opacity-50">
+                        Ask AI Coach ✨
+                    </button>
+                    
+                    <button id="show-meal-plan-form-btn"
+                            class="bg-orange-500 hover:bg-orange-600 text-white font-semibold py-3 px-5 rounded-xl transition duration-150 ease-in-out shadow-lg hover:shadow-xl flex items-center justify-center">
+                        Generate Meal Plan 🥑
+                    </button>
+
+                    <button id="generate-report-btn"
+                            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-5 rounded-xl transition duration-150 ease-in-out shadow-lg hover:shadow-xl flex items-center justify-center disabled:opacity-50">
+                        View Weekly Report 📊
+                    </button>
+                </div>
+                
+                <!-- AI Coach Advice Result Area (Existing) -->
+                <div id="coach-advice-container" class="mt-4 p-4 bg-lime-50 border border-lime-300 rounded-xl hidden">
+                    <p class="font-bold text-lime-800 mb-2">🧠 AI Fitness Coach Advice:</p>
+                    <div id="coach-advice-text" class="text-sm text-lime-700 leading-relaxed"></div>
+                    <div id="coach-loading" class="text-sm text-center text-lime-700 hidden">
+                        <svg class="animate-spin h-5 w-5 mr-3 inline text-lime-700" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Analyzing your last 7 days of activity...
+                    </div>
+                </div>
+                
+                <!-- Meal Plan Generator Form -->
+                <div id="meal-plan-form-container" class="mt-4 p-4 bg-orange-50 border border-orange-300 rounded-xl hidden">
+                    <p class="font-bold text-orange-800 mb-3">Goal for Meal Plan:</p>
+                    <select id="goal-input" class="w-full p-3 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition duration-150 mb-3">
+                        <option value="lose weight">Lose Weight (Calorie Deficit)</option>
+                        <option value="build muscle" selected>Build Muscle (High Protein)</option>
+                        <option value="maintain weight">Maintain Weight (Balanced)</option>
+                        <option value="improve endurance">Improve Endurance (High Carbs)</option>
+                    </select>
+                    
+                    <button id="generate-meal-plan-btn"
+                            class="w-full bg-orange-700 hover:bg-orange-800 text-white font-semibold py-3 px-5 rounded-xl transition duration-150 ease-in-out shadow-lg hover:shadow-xl flex items-center justify-center disabled:opacity-50">
+                        Generate 1-Day Plan ✨
+                    </button>
+                </div>
+
+                <!-- Meal Plan Result Area -->
+                <div id="meal-plan-output-container" class="mt-4 p-4 bg-orange-100 border border-orange-400 rounded-xl hidden">
+                    <h3 class="font-bold text-orange-800 mb-3 text-lg">🍽️ 1-Day Personalized Meal Plan</h3>
+                    <div id="meal-plan-output-text" class="text-sm text-orange-700 leading-relaxed"></div>
+                    <div id="meal-plan-loading" class="text-sm text-center text-orange-700 mt-4 hidden">
+                        <svg class="animate-spin h-5 w-5 mr-3 inline text-orange-700" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Calculating macronutrients and preparing your meal plan...
+                    </div>
+                </div>
+
+                <!-- Weekly Report Result Area (NEW) -->
+                <div id="weekly-report-container" class="mt-4 p-4 bg-blue-50 border border-blue-300 rounded-xl hidden">
+                    <h3 class="font-bold text-blue-800 mb-2 text-lg">📅 Your Last 7-Day Performance:</h3>
+                    <div id="weekly-report-text" class="text-sm text-blue-700 leading-relaxed"></div>
+                    <div id="report-loading" class="text-sm text-center text-blue-700 hidden mt-4">
+                        <svg class="animate-spin h-5 w-5 mr-3 inline text-blue-700" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Calculating performance metrics...
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Workout Log Input Form -->
+            <div class="bg-gray-50 p-6 rounded-xl mb-8 border border-gray-200">
+                <h2 class="text-xl font-bold mb-4 text-sky-700">Log a New Workout</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <input type="text" id="type-input" placeholder="Type (e.g., Run, Lift, Yoga)"
+                           class="col-span-2 sm:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-150">
+                    <input type="number" id="duration-input" placeholder="Duration (mins)"
+                           class="col-span-2 sm:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-150">
+                    <input type="number" id="calories-input" placeholder="Calories Burned"
+                           class="col-span-2 sm:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-150">
+                    <input type="date" id="date-input" value=""
+                           class="col-span-2 sm:col-span-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition duration-150">
+                </div>
+                <button id="log-workout-btn"
+                        class="w-full mt-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold py-3 px-5 rounded-xl transition duration-150 ease-in-out shadow-lg hover:shadow-xl disabled:opacity-50">
+                    Log Workout
+                </button>
+            </div>
+
+            <!-- Items List Container -->
+            <h2 class="text-2xl font-bold mt-8 mb-4 text-gray-800 border-b pb-2">Recent Workouts</h2>
+            <div id="workout-list" class="space-y-3">
+                <!-- Workouts will be rendered here -->
+            </div>
+            
+            <!-- Empty State Message -->
+            <div id="empty-state" class="hidden text-center p-8 bg-gray-50 rounded-xl mt-8 border border-dashed border-gray-200">
+                <svg class="w-10 h-10 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <p class="mt-2 text-lg font-medium text-gray-500">No workouts logged yet.</p>
+                <p class="text-sm text-gray-400">Use the form above to get started!</p>
+            </div>
+        </div>
+        
+        <!-- Tab Content: Daily Classes (AI Guided) -->
+        <div id="content-classes" class="tab-content hidden">
+            <h2 class="text-2xl font-extrabold mb-4 text-fuchsia-700">Daily Classes (AI Guided)</h2>
+            <p class="text-gray-600 mb-6">Choose a class type to generate a dynamic, step-by-step workout routine!</p>
+
+            <div id="class-buttons" class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+                <button data-class="30-Minute HIIT" class="class-start-btn bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-semibold py-3 px-3 rounded-xl transition duration-150 shadow-md">
+                    HIIT Blast 🔥
+                </button>
+                <button data-class="45-Minute Full-Body Strength" class="class-start-btn bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-semibold py-3 px-3 rounded-xl transition duration-150 shadow-md">
+                    Strength Training 💪
+                </button>
+                <button data-class="20-Minute Core & Mobility" class="class-start-btn bg-fuchsia-500 hover:bg-fuchsia-600 text-white font-semibold py-3 px-3 rounded-xl transition duration-150 shadow-md">
+                    Core & Mobility 🧘
+                </button>
+            </div>
+
+            <!-- Generated Class Instructions Area -->
+            <div id="class-output-container" class="p-6 bg-purple-50 border border-purple-300 rounded-xl hidden">
+                <h3 id="class-title" class="text-xl font-bold text-purple-800 mb-3"></h3>
+                <div id="class-instructions" class="text-sm text-purple-700 leading-relaxed class-instructions"></div>
+                <div id="class-loading" class="text-sm text-center text-purple-700 mt-4 hidden">
+                    <svg class="animate-spin h-5 w-5 mr-3 inline text-purple-700" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Generating your custom workout class...
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Content: Training Guide -->
+        <div id="content-guide" class="tab-content hidden guide-content">
+            <h2 class="text-2xl font-extrabold mb-4 text-gray-800">Muscle Group Training Guide</h2>
+            <p class="text-gray-600 mb-6 border-b pb-4">Focus on 3-4 sets per exercise, aiming for 8-12 reps for hypertrophy (muscle growth).</p>
+
+            <!-- Guide Sections -->
+            <div class="space-y-6">
+                <!-- Chest -->
+                <div class="guide-section border-red-400 rounded-xl shadow-sm">
+                    <h3 class="text-xl font-bold text-red-700 mb-2">Pectorals (Chest)</h3>
+                    <p class="text-gray-700 text-sm font-semibold mb-1">Focus Areas: Upper, Middle, and Lower Chest.</p>
+                    <ul class="guide-content ul">
+                        <li><strong>Barbell Bench Press (Middle):</strong> Primary strength builder.</li>
+                        <li><strong>Incline Dumbbell Press (Upper):</strong> Critical for full chest development.</li>
+                        <li><strong>Cable Crossover or Pec Deck (Isolation):</strong> For deep contraction and shaping.</li>
+                    </ul>
+                </div>
+                
+                <!-- Back -->
+                <div class="guide-section border-blue-400 rounded-xl shadow-sm">
+                    <h3 class="text-xl font-bold text-blue-700 mb-2">Back (Lats, Traps, Rhomboids)</h3>
+                    <p class="text-gray-700 text-sm font-semibold mb-1">Focus Areas: Width (Lats) and Thickness (Rows).</p>
+                    <ul class="guide-content ul">
+                        <li><strong>Pull-ups / Lat Pulldowns (Width):</strong> Excellent for developing the "V-taper."</li>
+                        <li><strong>Barbell Rows (Thickness):</strong> Builds density through the entire back.</li>
+                        <li><strong>Seated Cable Rows (Mid-back):</strong> Focus on squeezing the shoulder blades together.</li>
+                        <li><strong>Face Pulls (Shoulder/Upper Back Health):</strong> Essential prehab/rehab exercise.</li>
+                    </ul>
+                </div>
+
+                <!-- Legs -->
+                <div class="guide-section border-green-400 rounded-xl shadow-sm">
+                    <h3 class="text-xl font-bold text-green-700 mb-2">Legs (Quads, Hamstrings, Glutes)</h3>
+                    <p class="text-gray-700 text-sm font-semibold mb-1">Focus Areas: Compound movements are key.</p>
+                    <ul class="guide-content ul">
+                        <li><strong>Barbell Squats (Full Leg):</strong> The king of leg exercises.</li>
+                        <li><strong>Leg Press or Hack Squat (Volume):</strong> High-volume quad builder.</li>
+                        <li><strong>Romanian Deadlifts (Hamstrings/Glutes):</strong> Focus on hip hinge and hamstring stretch.</li>
+                        <li><strong>Leg Extensions and Curls (Isolation):</strong> Finishers for muscle separation.</li>
+                    </ul>
+                </div>
+
+                <!-- Shoulders -->
+                <div class="guide-section border-yellow-400 rounded-xl shadow-sm">
+                    <h3 class="text-xl font-bold text-yellow-700 mb-2">Shoulders (Deltoids)</h3>
+                    <p class="text-gray-700 text-sm font-semibold mb-1">Focus Areas: Front, Side, and Rear Delts.</p>
+                    <ul class="guide-content ul">
+                        <li><strong>Overhead Press (Front):</strong> Primary strength movement.</li>
+                        <li><strong>Lateral Raises (Side):</strong> Critical for shoulder width (use light weight, strict form).</li>
+                        <li><strong>Reverse Pec Deck or Band Pull Aparts (Rear):</strong> Often neglected, crucial for posture.</li>
+                    </ul>
+                </div>
+
+                <!-- Arms & Core -->
+                <div class="guide-section border-purple-400 rounded-xl shadow-sm">
+                    <h3 class="text-xl font-bold text-purple-700 mb-2">Arms & Core</h3>
+                    <p class="text-gray-700 text-sm font-semibold mb-1">Finishing movements for aesthetics and stability.</p>
+                    <ul class="guide-content ul">
+                        <li><strong>Biceps:</strong> Barbell Curls, Hammer Curls.</li>
+                        <li><strong>Triceps:</strong> Skull Crushers, Cable Pushdowns.</li>
+                        <li><strong>Core:</strong> Planks (time-based), Hanging Leg Raises.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // --- Configuration for AI features ---
+        // NOTE: If you are running this outside the secure environment, you MUST fill in your API key here.
+        const GEMINI_API_KEY = ""; 
+        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+        const LOCAL_STORAGE_KEY = 'fitnessTrackerWorkouts';
+        
+        let currentWorkoutsData = []; 
+
+        // ----------------------------------------------------------------------
+        // 1. DATA PERSISTENCE (Local Storage)
+        // ----------------------------------------------------------------------
+
+        function loadWorkouts() {
+            try {
+                const storedData = localStorage.getItem(LOCAL_STORAGE_KEY);
+                if (storedData) {
+                    // Restore data and ensure dates are converted back from strings to Date objects
+                    currentWorkoutsData = JSON.parse(storedData).map(w => ({
+                        ...w,
+                        date: new Date(w.date)
+                    }));
+                } else {
+                    currentWorkoutsData = [];
+                }
+            } catch (e) {
+                console.error("Error loading data from localStorage:", e);
+                currentWorkoutsData = [];
+            }
+            renderWorkouts(currentWorkoutsData);
+        }
+
+        function saveWorkouts() {
+            try {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentWorkoutsData));
+            } catch (e) {
+                console.error("Error saving data to localStorage:", e);
+            }
+        }
+
+        function saveWorkout(type, duration, calories, dateString) {
+            const newWorkout = {
+                id: crypto.randomUUID(), 
+                type: type.trim(),
+                duration: parseInt(duration, 10),
+                calories: parseInt(calories, 10),
+                date: new Date(dateString)
+            };
+            currentWorkoutsData.push(newWorkout);
+            saveWorkouts();
+            renderWorkouts(currentWorkoutsData);
+        }
+
+        function deleteWorkout(id) {
+            currentWorkoutsData = currentWorkoutsData.filter(w => w.id !== id);
+            saveWorkouts();
+            renderWorkouts(currentWorkoutsData);
+        }
+
+        // ----------------------------------------------------------------------
+        // 2. UI RENDERING AND EVENT LISTENERS
+        // ----------------------------------------------------------------------
+
+        const workoutListEl = document.getElementById('workout-list');
+        const typeInputEl = document.getElementById('type-input');
+        const durationInputEl = document.getElementById('duration-input');
+        const caloriesInputEl = document.getElementById('calories-input');
+        const dateInputEl = document.getElementById('date-input');
+        const logWorkoutBtn = document.getElementById('log-workout-btn');
+        const emptyStateEl = document.getElementById('empty-state');
+        
+        // LLM and Report elements
+        const showMealPlanFormBtn = document.getElementById('show-meal-plan-form-btn');
+        const mealPlanFormContainer = document.getElementById('meal-plan-form-container');
+        const goalInputEl = document.getElementById('goal-input');
+        const generateMealPlanBtn = document.getElementById('generate-meal-plan-btn');
+        const mealPlanOutputContainer = document.getElementById('meal-plan-output-container');
+        const mealPlanOutputTextEl = document.getElementById('meal-plan-output-text');
+        const mealPlanLoadingEl = document.getElementById('meal-plan-loading');
+        
+        // NEW Report Elements
+        const generateReportBtn = document.getElementById('generate-report-btn');
+        const weeklyReportContainer = document.getElementById('weekly-report-container');
+        const weeklyReportTextEl = document.getElementById('weekly-report-text');
+        const reportLoadingEl = document.getElementById('report-loading');
+
+
+        function renderWorkouts(workouts) {
+            workoutListEl.innerHTML = '';
+
+            if (workouts.length === 0) {
+                emptyStateEl.classList.remove('hidden');
+            } else {
+                emptyStateEl.classList.add('hidden');
+                
+                // Sort by date descending (most recent first)
+                workouts.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+                workouts.forEach(workout => {
+                    const workoutDate = workout.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                    const workoutEl = document.createElement('div');
+                    workoutEl.className = 'workout-row flex items-center justify-between p-4 bg-white rounded-xl border border-gray-200 hover:border-sky-300';
+                    workoutEl.setAttribute('data-id', workout.id);
+                    
+                    workoutEl.innerHTML = `
+                        <!-- Date and Type -->
+                        <div class="flex-1 min-w-0 pr-4 flex items-center space-x-4">
+                            <span class="text-sm font-semibold text-sky-600 bg-sky-100 px-3 py-1 rounded-full">${workoutDate}</span>
+                            <span class="text-lg font-bold text-gray-800 truncate">${workout.type}</span>
+                        </div>
+
+                        <!-- Details (Duration & Calories) -->
+                        <div class="flex items-center space-x-6 flex-shrink-0 text-right">
+                            <div class="hidden sm:block">
+                                <span class="block text-sm font-medium text-gray-500">Duration</span>
+                                <span class="block text-lg font-semibold text-gray-700">${workout.duration} min</span>
+                            </div>
+                            <div>
+                                <span class="block text-sm font-medium text-gray-500">Calories</span>
+                                <span class="block text-lg font-semibold text-red-500">${workout.calories} kcal</span>
+                            </div>
+                        </div>
+
+                        <!-- Delete Button -->
+                        <div class="flex items-center space-x-4 ml-6 flex-shrink-0">
+                            <button data-action="delete"
+                                    class="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 transition duration-150 ease-in-out flex-shrink-0"
+                                    aria-label="Delete workout">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    `;
+
+                    workoutListEl.appendChild(workoutEl);
+                });
+            }
+        }
+
+        function handleLogWorkout() {
+            const type = typeInputEl.value.trim();
+            const duration = durationInputEl.value;
+            const calories = caloriesInputEl.value;
+            const date = dateInputEl.value;
+
+            if (type && duration > 0 && calories > 0 && date) {
+                saveWorkout(type, duration, calories, date);
+                typeInputEl.value = '';
+                durationInputEl.value = '';
+                caloriesInputEl.value = '';
+            } else {
+                console.warn("Please fill in all workout fields correctly.");
+            }
+        }
+
+        function setupListeners() {
+            logWorkoutBtn.addEventListener('click', handleLogWorkout);
+            
+            workoutListEl.addEventListener('click', (event) => {
+                const workoutEl = event.target.closest('.workout-row');
+                if (!workoutEl) return;
+
+                const id = workoutEl.getAttribute('data-id');
+                const action = event.target.getAttribute('data-action') || event.target.closest('[data-action]')?.getAttribute('data-action');
+
+                if (action === 'delete') {
+                    deleteWorkout(id);
+                }
+            });
+
+            showMealPlanFormBtn.addEventListener('click', () => {
+                mealPlanFormContainer.classList.toggle('hidden');
+                mealPlanOutputContainer.classList.add('hidden'); // Hide output when showing form
+            });
+            generateMealPlanBtn.addEventListener('click', generateMealPlanWithGemini);
+            
+            generateReportBtn.addEventListener('click', generateWeeklyReport); // Listener for Report
+
+             document.getElementById('date-input').valueAsDate = new Date();
+             setupTabs(); 
+             document.getElementById('tab-tracker').click(); 
+        }
+
+        // Tab Switching Logic
+        function setupTabs() {
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const targetTab = e.currentTarget.getAttribute('data-tab');
+
+                    // Deactivate all buttons and hide all content
+                    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+
+                    // Activate the clicked button and show the corresponding content
+                    e.currentTarget.classList.add('active');
+                    document.getElementById(`content-${targetTab}`).classList.remove('hidden');
+                });
+            });
+        }
+        
+        function initializeApp() {
+            loadWorkouts(); // Load data from local storage
+            setupListeners();
+            setupGeminiListeners(); // Setup AI feature listeners
+        }
+
+        // Start the application lifecycle
+        window.onload = initializeApp;
+
+        // ----------------------------------------------------------------------
+        // 3. WEEKLY REPORT GENERATION (No Database Needed)
+        // ----------------------------------------------------------------------
+
+        function generateWeeklyReport() {
+            // Show report area and loading indicator
+            weeklyReportContainer.classList.remove('hidden');
+            weeklyReportTextEl.innerHTML = '';
+            reportLoadingEl.classList.remove('hidden');
+            generateReportBtn.disabled = true;
+
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            
+            // Set time to midnight for accurate date comparison
+            oneWeekAgo.setHours(0, 0, 0, 0);
+
+            // Filter workouts from the last 7 days
+            const recentWorkouts = currentWorkoutsData.filter(w => w.date >= oneWeekAgo);
+
+            if (recentWorkouts.length === 0) {
+                weeklyReportTextEl.innerHTML = "<p>You have **no workouts** logged in the last 7 days.</p><p>Time to get moving! Log your first activity using the form above.</p>";
+                reportLoadingEl.classList.add('hidden');
+                generateReportBtn.disabled = false;
+                return;
+            }
+
+            // --- Calculations ---
+            const totalDuration = recentWorkouts.reduce((sum, w) => sum + w.duration, 0);
+            const totalCalories = recentWorkouts.reduce((sum, w) => sum + w.calories, 0);
+            const totalWorkouts = recentWorkouts.length;
+            
+            // Calculate unique days active
+            const uniqueDays = new Set(recentWorkouts.map(w => w.date.toDateString())).size;
+            
+            // Count activity types for finding the most frequent one
+            const typeCounts = recentWorkouts.reduce((counts, w) => {
+                const type = w.type || 'Unnamed Activity';
+                counts[type] = (counts[type] || 0) + 1;
+                return counts;
+            }, {});
+
+            let mostFrequentType = 'N/A';
+            let maxCount = 0;
+            for (const type in typeCounts) {
+                if (typeCounts[type] > maxCount) {
+                    maxCount = typeCounts[type];
+                    mostFrequentType = type;
+                }
+            }
+
+            // --- Report Generation ---
+            const reportHTML = `
+                <p class="mb-2"><strong>Summary:</strong> You completed <strong>${totalWorkouts} workouts</strong> over the past week, staying active on <strong>${uniqueDays} distinct days</strong>.</p>
+                <ul class="list-disc ml-5 space-y-1 text-sm">
+                    <li><strong>Total Active Time:</strong> ${totalDuration} minutes</li>
+                    <li><strong>Total Calories Burned:</strong> ${totalCalories} kcal</li>
+                    <li><strong>Most Frequent Activity:</strong> ${mostFrequentType} (${maxCount} times)</li>
+                </ul>
+                <p class="mt-3 text-xs italic text-gray-500">Great job on your consistency! Keep tracking those sessions.</p>
+            `;
+
+            // Simulate a small delay for the "loading" effect and display
+            setTimeout(() => {
+                weeklyReportTextEl.innerHTML = reportHTML;
+                reportLoadingEl.classList.add('hidden');
+                generateReportBtn.disabled = false;
+            }, 500);
+        }
+
+        // ----------------------------------------------------------------------
+        // 4. GEMINI API INTEGRATION (AI Fitness Coach & Classes)
+        // ----------------------------------------------------------------------
+        
+        const getAdviceBtn = document.getElementById('get-advice-btn');
+        const adviceContainer = document.getElementById('coach-advice-container');
+        const adviceTextEl = document.getElementById('coach-advice-text');
+        const coachLoadingEl = document.getElementById('coach-loading');
+        
+        const classOutputContainer = document.getElementById('class-output-container');
+        const classTitleEl = document.getElementById('class-title');
+        const classInstructionsEl = document.getElementById('class-instructions');
+        const classLoadingEl = document.getElementById('class-loading');
+        const classStartBtns = document.querySelectorAll('.class-start-btn');
+
+        async function exponentialBackoffFetch(url, options, maxRetries = 5) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.status === 429 && i < maxRetries - 1) {
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    return response;
+                } catch (error) {
+                    if (i < maxRetries - 1) {
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    throw error;
+                }
+            }
+            throw new Error('Fetch request failed after maximum retries.');
+        }
+
+        function formatMarkdown(markdownText, isNumbered = false) {
+            let html = markdownText.trim();
+            
+            // Convert newline-separated list items
+            html = html.replace(/^\* (.*$)/gim, '<li>$1</li>'); 
+            html = html.replace(/^- (.*$)/gim, '<li>$1</li>'); 
+            html = html.replace(/^\d+\. (.*$)/gim, '<li>$1</li>');
+
+            // Wrap lists (check if <li> exists and ensure list markers are removed from inner content)
+            const listItems = html.split('\n').filter(line => line.trim().startsWith('<li>'));
+            if (listItems.length > 0) {
+                const listTag = isNumbered ? 'ol' : 'ul';
+                html = `<${listTag}>` + listItems.join('') + `</${listTag}>`;
+            }
+
+            // Handle bold text
+            html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            
+            // Wrap remaining standalone text blocks in <p> tags
+            const sections = html.split('\n\n');
+            html = sections.map(p => {
+                if (p.trim() === '') return '';
+                if (p.startsWith('<ul') || p.startsWith('<ol')) return p; 
+                return `<p class="mb-2">${p}</p>`;
+            }).join('');
+            
+            return html;
+        }
+
+
+        async function analyzeWorkoutsWithGemini() {
+            if (GEMINI_API_KEY === "" && typeof __app_id === 'undefined') {
+                 adviceTextEl.innerHTML = '<p class="text-red-600">AI features disabled: **GEMINI_API_KEY** is not set.</p>';
+                 adviceContainer.classList.remove('hidden');
+                 return;
+            }
+
+            if (!currentWorkoutsData || currentWorkoutsData.length === 0) {
+                adviceTextEl.innerHTML = "<p>Please log a few workouts first before asking for advice!</p>";
+                adviceContainer.classList.remove('hidden');
+                return;
+            }
+
+            adviceContainer.classList.remove('hidden');
+            adviceTextEl.innerHTML = '';
+            coachLoadingEl.classList.remove('hidden');
+            getAdviceBtn.disabled = true;
+
+            try {
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+                const recentWorkouts = currentWorkoutsData
+                    .filter(w => w.date >= oneWeekAgo)
+                    .map(w => ({
+                        date: w.date.toLocaleDateString(),
+                        type: w.type,
+                        duration: w.duration,
+                        calories: w.calories
+                    }));
+                
+                if (recentWorkouts.length === 0) {
+                    adviceTextEl.innerHTML = "<p>No workouts logged in the last 7 days. Try logging one today!</p>";
+                    return;
+                }
+
+                const workoutListString = recentWorkouts
+                    .map(w => `- ${w.date}: ${w.type} (${w.duration} min, ${w.calories} kcal)`)
+                    .join('\n');
+                    
+                const userQuery = `Analyze my workout data from the past week and provide a motivational summary and one actionable tip to help me achieve better fitness balance or consistency. Focus on cardio vs. strength balance, and identify any missing active days.\n\nWorkouts Logged:\n${workoutListString}`;
+
+                const systemPrompt = "You are an encouraging and knowledgeable AI Fitness Coach. Your response must be brief (less than 100 words), highly positive, and use a bulleted list for the actionable tip.";
+                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                };
+
+                const response = await exponentialBackoffFetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const text = candidate.content.parts[0].text;
+                    adviceTextEl.innerHTML = formatMarkdown(text, false); 
+                } else {
+                    adviceTextEl.innerHTML = '<p class="text-red-600">Failed to generate advice. Please try again.</p>';
+                }
+
+            } catch (error) {
+                console.error("Gemini API call failed:", error);
+                adviceTextEl.innerHTML = `<p class="text-red-600">Error during analysis: ${error.message}</p>`;
+            } finally {
+                coachLoadingEl.classList.add('hidden');
+                getAdviceBtn.disabled = false;
+            }
+        }
+
+        async function handleStartClass(classType) {
+             if (GEMINI_API_KEY === "" && typeof __app_id === 'undefined') {
+                 classInstructionsEl.innerHTML = '<p class="text-red-600">AI features disabled: **GEMINI_API_KEY** is not set.</p>';
+                 classOutputContainer.classList.remove('hidden');
+                 return;
+            }
+
+            classTitleEl.textContent = classType + ' Routine';
+            classInstructionsEl.innerHTML = '';
+            classOutputContainer.classList.remove('hidden');
+            classLoadingEl.classList.remove('hidden');
+            document.querySelectorAll('.class-start-btn').forEach(btn => btn.disabled = true);
+
+            try {
+                const userQuery = `Generate a comprehensive, step-by-step workout routine for a '${classType}' class. The routine must be formatted as a single numbered list with the following sections clearly marked in **bold**: **Warmup**, **Circuit 1**, **Circuit 2**, and **Cool Down**. Provide specific exercises and suggested timings/reps for each step.`;
+
+                const systemPrompt = "You are an enthusiastic and highly structured virtual fitness instructor. You specialize in creating safe, effective, and easy-to-follow workout scripts. Your entire output must be a single, detailed numbered list following the user's requested structure.";
+                
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: {
+                        parts: [{ text: systemPrompt }]
+                    },
+                };
+
+                const response = await exponentialBackoffFetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const candidate = result.candidates?.[0];
+
+                if (candidate && candidate.content?.parts?.[0]?.text) {
+                    const text = candidate.content.parts[0].text;
+                    classInstructionsEl.innerHTML = formatMarkdown(text, true); 
+                } else {
+                    classInstructionsEl.innerHTML = '<p class="text-red-600">Failed to generate class routine. Please try again.</p>';
+                }
+
+            } catch (error) {
+                console.error("Gemini Class API call failed:", error);
+                classInstructionsEl.innerHTML = `<p class="text-red-600">Error generating class: ${error.message}</p>`;
+            } finally {
+                classLoadingEl.classList.add('hidden');
+                document.querySelectorAll('.class-start-btn').forEach(btn => btn.disabled = false);
+            }
+        }
+        
+        async function generateMealPlanWithGemini() {
+             if (GEMINI_API_KEY === "" && typeof __app_id === 'undefined') {
+                 mealPlanOutputTextEl.innerHTML = '<p class="text-red-600">AI features disabled: **GEMINI_API_KEY** is not set.</p>';
+                 mealPlanOutputContainer.classList.remove('hidden');
+                 return;
+            }
+
+            const goal = goalInputEl.value;
+            mealPlanOutputContainer.classList.remove('hidden');
+            mealPlanOutputTextEl.innerHTML = '';
+            mealPlanLoadingEl.classList.remove('hidden');
+            generateMealPlanBtn.disabled = true;
+
+            try {
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                oneWeekAgo.setHours(0, 0, 0, 0);
+
+                const activeDays = new Set(currentWorkoutsData.filter(w => w.date >= oneWeekAgo).map(w => w.date.toDateString())).size;
+                let activityLevel = "sedentary";
+                if (activeDays >= 5) activityLevel = "highly active";
+                else if (activeDays >= 3) activityLevel = "moderately active";
+                else if (activeDays >= 1) activityLevel = "low activity";
+                
+                const userQuery = `Generate a delicious, healthy 1-day meal plan to help me achieve my goal to '${goal}'. My current activity level is inferred as '${activityLevel}' based on my past workouts. The plan must include specific examples for Breakfast, Lunch, Dinner, and one Snack.`;
+                
+                const systemPrompt = "You are an expert sports nutritionist. Create a 1-day meal plan focused on whole foods, clean eating, and optimal macronutrient timing based on the user's goal and activity level. Ensure the output strictly follows the required JSON schema.";
+
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+                const responseSchema = {
+                    type: "OBJECT",
+                    properties: {
+                        "summary": { 
+                            "type": "STRING", 
+                            "description": "A brief 1-2 sentence summary of the plan's approach based on the user's goal and activity level."
+                        },
+                        "meals": {
+                            "type": "ARRAY",
+                            "description": "The list of meals for the day.",
+                            "items": {
+                                "type": "OBJECT",
+                                "properties": {
+                                    "time": { "type": "STRING", "description": "The meal time (e.g., Breakfast, Lunch, Snack, Dinner)." },
+                                    "description": { "type": "STRING", "description": "A description of the meal." },
+                                    "macros": { "type": "STRING", "description": "Approximate macronutrient breakdown (e.g., P: 30g, C: 40g, F: 10g)." }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: responseSchema
+                    }
+                };
+                
+                const response = await exponentialBackoffFetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (jsonText) {
+                    const parsedJson = JSON.parse(jsonText);
+                    let html = `<p class="font-semibold text-base mb-3">${parsedJson.summary}</p>`;
+                    
+                    parsedJson.meals.forEach(meal => {
+                        html += `
+                            <div class="p-3 mb-3 border-b border-orange-300 last:border-b-0">
+                                <p class="text-sm font-bold text-orange-800">${meal.time}:</p>
+                                <p class="text-sm mb-1">${meal.description}</p>
+                                <p class="text-xs font-mono text-orange-600 bg-orange-200 inline-block px-2 py-0.5 rounded-md">${meal.macros}</p>
+                            </div>
+                        `;
+                    });
+                    mealPlanOutputTextEl.innerHTML = html;
+                    
+                } else {
+                    mealPlanOutputTextEl.innerHTML = '<p class="text-red-600">Failed to generate meal plan. The AI did not return a valid structured response.</p>';
+                }
+
+            } catch (error) {
+                console.error("Gemini Meal Plan API call failed:", error);
+                mealPlanOutputTextEl.innerHTML = `<p class="text-red-600">Error generating meal plan: ${error.message}</p>`;
+            } finally {
+                mealPlanLoadingEl.classList.add('hidden');
+                generateMealPlanBtn.disabled = false;
+            }
+        }
+        
+        // Event listeners for Class Buttons
+        function setupGeminiListeners() {
+            classStartBtns.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const classType = e.currentTarget.getAttribute('data-class');
+                    handleStartClass(classType);
+                });
+            });
+            getAdviceBtn.addEventListener('click', analyzeWorkoutsWithGemini);
+        }
+        
+    </script>
+
+</body>
+</html>
