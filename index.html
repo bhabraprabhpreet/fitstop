@@ -291,86 +291,13 @@
     <!-- JavaScript Logic -->
     <script>
         // --- Configuration for AI features ---
-        // --- 1. FIREBASE IMPORTS ---
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, onSnapshot, collection, query, where, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-    import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // NOTE: If you are running this outside the secure environment, you MUST fill in your API key here.
+        const GEMINI_API_KEY = ""; 
+        const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+        const LOCAL_STORAGE_KEY = 'fitnessTrackerWorkouts';
+        
+        let currentWorkoutsData = []; 
 
-    // --- 2. MANDATORY GLOBAL CONFIGURATION ---
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    
-    // The Gemini API key remains an empty string for the models provided by the environment.
-    const apiKey = ""; 
-
-    // --- 3. INITIALIZE SERVICES ---
-    let app, db, auth;
-    let userId = null;
-    let isAuthReady = false;
-    
-    // Global variable to hold user data (Goals, Workouts, Badges)
-    let userData = {
-        goals: [],
-        workouts: [],
-        badges: []
-    };
-
-    // Global UI state
-    let activeTab = 'tracker'; 
-
-    // --- FIREBASE INITIALIZATION AND AUTHENTICATION ---
-    if (firebaseConfig) {
-        setLogLevel('debug'); // Enable debug logs for easier troubleshooting
-        app = initializeApp(firebaseConfig);
-        db = getFirestore(app);
-        auth = getAuth(app);
-
-        // Sign in the user using the provided token or anonymously
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                userId = user.uid;
-            } else {
-                // If the user isn't authenticated yet, try custom token or anonymous sign-in
-                if (initialAuthToken) {
-                    try {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                        userId = auth.currentUser.uid;
-                    } catch (error) {
-                        console.error("Custom token sign-in failed, falling back to anonymous:", error);
-                        await signInAnonymously(auth);
-                        userId = auth.currentUser.uid;
-                    }
-                } else {
-                    await signInAnonymously(auth);
-                    userId = auth.currentUser.uid;
-                }
-            }
-            isAuthReady = true;
-            console.log("Authentication Ready. User ID:", userId);
-            setupRealtimeListeners(); // Start listening for data once auth is ready
-            updateUserIdDisplay();
-        });
-    } else {
-        console.error("Firebase configuration is missing. Database features will not work.");
-        // If config is missing, proceed with a dummy userId for UI-only testing
-        userId = 'anonymous-' + crypto.randomUUID();
-        isAuthReady = true;
-        updateUserIdDisplay();
-    }
-    
-    // Function to update the User ID display in the UI (MANDATORY for multi-user apps)
-    function updateUserIdDisplay() {
-        const userIdDisplay = document.getElementById('userIdDisplay');
-        if (userIdDisplay) {
-            userIdDisplay.textContent = `User ID: ${userId.slice(0, 8)}...${userId.slice(-4)}`;
-            // Show the full ID on hover (good practice)
-            userIdDisplay.setAttribute('title', `Full ID: ${userId}`);
-        }
-    }
-
-    // --- YOUR EXISTING JAVASCRIPT FUNCTIONS (like loadWorkouts, setupRealtimeListeners) CONTINUE HERE ---
         // ----------------------------------------------------------------------
         // 1. DATA PERSISTENCE (Local Storage)
         // ----------------------------------------------------------------------
@@ -951,4 +878,5 @@
 
 </body>
 </html>
+
 
